@@ -1,38 +1,7 @@
-async function getWeather() {
-  const city = document.getElementById("city").value;
-  const resultDiv = document.getElementById("result");
-
-  if (city === "") {
-    resultDiv.innerHTML = "dehradun";
-    return;
-  }
-
-  const apiKey = window.WEATHER_CONFIG?.apiKey;
-  if (!apiKey || apiKey === "YOUR_OPENWEATHER_API_KEY") {
-    resultDiv.textContent = "Add your OpenWeather key to config.local.js before requesting weather.";
-    return;
-  }
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.cod === "404") {
-      resultDiv.innerHTML = "❌ City not found!";
-    } else {
-      const temp = data.main.temp;
-      const weather = data.weather[0].main;
-      const icon = data.weather[0].icon;
-
-      resultDiv.innerHTML = `
-        <h2>${data.name}</h2>
-        <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${weather}">
-        <p>${weather}</p>
-        <p>🌡️ ${temp} °C</p>
-      `;
-    }
-  } catch (error) {
-    resultDiv.innerHTML = "⚠️ Error fetching weather data.";
-  }
-}
+const $=id=>document.getElementById(id);let data=null,locationData=null,fahrenheit=false,controller;
+const codeLabel=code=>code===0?['Clear sky','☀']:code<=3?['Partly cloudy','☁']:code<=48?['Fog','≋']:code<=67?['Rain','☂']:code<=77?['Snow','❄']:code<=82?['Rain showers','☂']:code<=86?['Snow showers','❄']:['Thunderstorm','ϟ'];
+const temp=v=>`${Math.round(fahrenheit?v*9/5+32:v)}°${fahrenheit?'F':'C'}`;
+async function json(url,signal){const r=await fetch(url,{signal});if(!r.ok)throw Error('Weather service is unavailable. Please try again.');const result=await r.json();if(result.error)throw Error('Weather service could not complete the request.');return result;}
+function render(){if(!data)return;const c=data.current,d=data.daily;const [label,icon]=codeLabel(c.weather_code);$('place').textContent=[locationData.name,locationData.admin1,locationData.country].filter(Boolean).join(', ');$('date').textContent=`Updated ${c.time.replace('T',' at ')} · Local time`;$('temperature').textContent=temp(c.temperature_2m);$('condition').textContent=label;$('symbol').textContent=icon;$('feels').textContent=temp(c.apparent_temperature);$('humidity').textContent=`${c.relative_humidity_2m}%`;$('wind').textContent=`${Math.round(c.wind_speed_10m)} km/h`;$('rain').textContent=`${d.precipitation_probability_max[0]}%`;$('forecast').replaceChildren();d.time.forEach((day,i)=>{const a=document.createElement('article');const [desc,symbol]=codeLabel(d.weather_code[i]);const title=document.createElement('strong');title.textContent=i===0?'Today':new Date(day+'T12:00:00').toLocaleDateString('en',{weekday:'short'});const iconEl=document.createElement('div');iconEl.className='icon';iconEl.textContent=symbol;const range=document.createElement('strong');range.textContent=`${temp(d.temperature_2m_max[i])} / ${temp(d.temperature_2m_min[i])}`;range.style.fontSize='16px';const p=document.createElement('p');p.textContent=`${desc} · ${d.precipitation_probability_max[i]}% rain`;a.append(title,iconEl,range,p);$('forecast').append(a);});$('weather').hidden=false;$('welcome').hidden=true;}
+async function select(place,signal){$('status').textContent='Loading the latest forecast...';locationData=place;try{const params=new URLSearchParams({latitude:place.latitude,longitude:place.longitude,current:'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m',daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',timezone:'auto',forecast_days:5});data=await json(`https://api.open-meteo.com/v1/forecast?${params}`,signal);render();$('locations').replaceChildren();$('status').textContent='Forecast loaded. Search again to explore another city.';}catch(e){if(e.name!=='AbortError')$('status').textContent=e.message;}finally{if(!signal.aborted)$('searchButton').disabled=false;}}
+$('searchForm').addEventListener('submit',async e=>{e.preventDefault();const name=$('city').value.trim();if(name.length<2){$('status').textContent='Enter at least two letters of a city name.';return;}controller?.abort();controller=new AbortController();const signal=controller.signal;$('searchButton').disabled=true;$('status').textContent='Finding matching locations...';$('locations').replaceChildren();try{const results=await json(`https://geocoding-api.open-meteo.com/v1/search?${new URLSearchParams({name,count:5,language:'en',format:'json'})}`,signal);if(!results.results?.length){$('status').textContent='No matching city found. Check the spelling and try again.';return;}$('status').textContent='Choose the correct location:';for(const p of results.results){const b=document.createElement('button');b.type='button';b.textContent=[p.name,p.admin1,p.country].filter(Boolean).join(', ');b.onclick=()=>select(p,signal);$('locations').append(b);}}catch(e){if(e.name!=='AbortError')$('status').textContent='Could not connect to the weather service. Please try again.';}finally{if(!signal.aborted)$('searchButton').disabled=false;}});$('unit').onclick=()=>{fahrenheit=!fahrenheit;render();};
