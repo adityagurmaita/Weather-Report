@@ -7,7 +7,11 @@ async function getWeather() {
     return;
   }
 
-  const apiKey = "ab6e2e2772aca90eb6c518d7840424d3"; // Replace with your API key (see Step 6)
+  const apiKey = window.WEATHER_CONFIG?.apiKey;
+  if (!apiKey || apiKey === "YOUR_OPENWEATHER_API_KEY") {
+    resultDiv.textContent = "Add your OpenWeather key to config.local.js before requesting weather.";
+    return;
+  }
   const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
 
   try {
