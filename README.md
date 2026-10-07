@@ -1,6 +1,6 @@
 # Weather Report
 
-![Project](https://img.shields.io/badge/Weather_Report-32a5ba) ![Status](https://img.shields.io/badge/status-demo-blue)
+![Project](https://img.shields.io/badge/project-Weather_Report-32a5ba) ![Status](https://img.shields.io/badge/status-demo-blue)
 
 **JavaScript · OpenWeather**
 
